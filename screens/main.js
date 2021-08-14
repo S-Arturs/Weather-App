@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import latinize from 'latinize';
-import { StyleSheet, View, Text, TextInput, Dimensions, StatusBar, Image, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Dimensions, StatusBar, Image, TouchableOpacity, TouchableWithoutFeedback, Keyboard, PermissionsAndroid, Alert  } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -17,6 +17,7 @@ import data8 from '../json/data_8.txt';
 import data9 from '../json/data_9.txt';
 import data10 from '../json/data_10.txt';
 import { SharedElement} from 'react-navigation-shared-element';
+import {request, check, PERMISSIONS, RESULTS} from 'react-native-permissions';
 
 //placeholder list just in case
 let cityListData =  [{id: 0, name: "Globe", state: "", country: ""},{id: 1, name: "Globe", state: "", country: ""}]
@@ -24,6 +25,8 @@ let dataLoaded = false;
 let previousQueries = [];
 let previousText ='';
 let screenWidth = Dimensions.get("window").width;
+
+
 export default function Main(){
     if(!dataLoaded)
     //sequential city list data loading to avoid react native memory bug crashing the app
@@ -65,7 +68,6 @@ export default function Main(){
     const [unitsBool, changeUnitsBool] = useState(true);
     const [showResults, changeShowResults] = useState(false);
     const [showWeather, changeShowWeather] = useState(0);
-    
 
     if(showWeather != 0){
         navigation.navigate('Default', {location: `id=${showWeather}`, GPS: false, units: unitsBool});   
@@ -89,6 +91,32 @@ export default function Main(){
     }
     else{
         units = '°F'
+    }
+
+
+    const checkLocationPermission = () => {
+        check(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION)
+      .then((result) => {
+        switch (result) {
+          case RESULTS.UNAVAILABLE:
+            request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION)
+            break;
+          case RESULTS.DENIED:
+            request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION)
+            break;
+          case RESULTS.LIMITED:
+            navigation.navigate('Default', {location: "", GPS: true, units: unitsBool});
+            break;
+          case RESULTS.GRANTED:
+            navigation.navigate('Default', {location: "", GPS: true, units: unitsBool});
+            break;
+          case RESULTS.BLOCKED:
+            request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION)
+            break;
+        }
+      })
+      .catch((error) => {
+      });
     }
     return(   
         <View
@@ -190,7 +218,8 @@ export default function Main(){
             <View style={{flex:0.30}}/>
             
             <TouchableOpacity style={styles.bigButton} title ='Use current location' onPress={() => {
-                navigation.navigate('Default', {location: "", GPS: true, units: unitsBool});
+                checkLocationPermission();
+                //navigation.navigate('Default', {location: "", GPS: true, units: unitsBool});
             }}>
             <Ionicons
             style={styles.useCurrentLocation}
@@ -200,7 +229,7 @@ export default function Main(){
             </TouchableOpacity>
             <View style={{flex:0.30}}>
             <TouchableOpacity style={styles.unitButton} title ='Units' onPress={() => {
-               changeUnitsBool(!unitsBool)
+                changeUnitsBool(!unitsBool)
             }}>
             <Text style={styles.smallText}>{units}</Text>
             </TouchableOpacity>
